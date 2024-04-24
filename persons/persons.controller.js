@@ -1,52 +1,104 @@
-const personsService = require('./persons.service');
 
-const getAllPersons = (req, res) => {
-  const persons = personsService.getAllPersons();
-  res.json(persons);
-};
+const uuidv4  =  require('uuid');
+const Joi = require('joi');
+const personsService = require('../persons/persons.service');
+const personSchema = Joi.object({
+  name: Joi.string().required(),
+  age: Joi.number().min(1).max(140).required(),
+  hobbies: Joi.array().default([]).required(),
+});
 
-const getPersonById = (req, res) => {
-  const { personId } = req.params;
-  const person = personsService.getPersonById(personId);
-  if (!person) {
-    return res.status(404).json({ error: 'Person not found' });
-  }
-  res.json(person);
-};
-
-const createPerson = (req, res) => {
+const getPersons = async (req, res, next) => {
   try {
-    const newPerson = personsService.createPerson(req.body);
-    res.status(201).json(newPerson);
+    const persons = req.app.get('db');
+    res.json(persons);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    next(error);
   }
 };
 
-const updatePerson = (req, res) => {
+const getPerson = async (req, res, next) => {
   try {
-    const { personId } = req.params;
-    const updatedPerson = personsService.updatePerson(personId, req.body);
-    res.json(updatedPerson);
+    const persons = req.app.get('db');
+    const result = await personsService.getPersonById(req.params.personId, persons);
+
+    if (!result) {
+      return res.sendStatus(404);
+    }
+
+    res.json(result);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    next(error);
   }
 };
 
-const deletePerson = (req, res) => {
+const createPerson = async (req, res, next) => {
   try {
-    const { personId } = req.params;
-    const message = personsService.deletePerson(personId);
-    res.json(message);
+    const persons = req.app.get('db');
+    const { error, value } = personSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json(error);
+    }
+
+    await personsService.createPerson(value, persons);
+    res.sendStatus(200);
   } catch (error) {
-    res.status(404).json({ error: error.message });
+    next(error);
+  }
+};
+
+const updatePerson = async (req, res, next) => {
+  try {
+    const persons = req.app.get('db');
+    const { error, value } = personSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json(error);
+    }
+
+    const result = await personsService.updatePerson(req.params.personId, value, persons);
+
+    if (!result) {
+      return res.sendStatus(404);
+    }
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deletePerson = async (req, res, next) => {
+  try {
+    const persons = req.app.get('db');
+    const response = await personsService.deleteOnePerson(req.params.personId, persons);
+
+    if (!response) {
+      return res.sendStatus(404);
+    }
+
+    res.json(persons);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deletePersons = async (req, res, next) => {
+  try {
+    const persons = req.app.get('db');
+    persons.length = 0;
+    res.sendStatus(200);
+  } catch (error) {
+    next(error);
   }
 };
 
 module.exports = {
-  getAllPersons,
-  getPersonById,
+  getPersons,
+  getPerson,
   createPerson,
   updatePerson,
-  deletePerson
+  deletePerson,
+  deletePersons,
 };

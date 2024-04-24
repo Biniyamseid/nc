@@ -1,5 +1,4 @@
-const db = require('../db/inMemoryDb');
-const { v4: uuidv4 } = require('uuid');
+const uuid  =  require('uuid');
 const Joi = require('joi');
 
 const personSchema = Joi.object({
@@ -8,32 +7,57 @@ const personSchema = Joi.object({
   hobbies: Joi.array().items(Joi.string()).required()
 });
 
-const getAllPersons = () => Object.values(db);
-const getPersonById = (id) => db[id] || null;
-const createPerson = (person) => {
+const getPersonById = (id, db) => db.find(person => person.id === id) || null;
+
+const createPerson = (person, persons) => {
   const { value, error } = personSchema.validate(person);
-  if (error) throw new Error(error.details[0].message);
-  const id = uuidv4();
-  db[id] = { id, ...value };
-  return db[id];
-};
-const updatePerson = (id, person) => {
-  if (!db[id]) throw new Error('Person not found');
-  const { value, error } = personSchema.validate(person);
-  if (error) throw new Error(error.details[0].message);
-  db[id] = { id, ...value };
-  return db[id];
-};
-const deletePerson = (id) => {
-  if (!db[id]) throw new Error('Person not found');
-  delete db[id];
-  return { message: 'Person deleted successfully' };
+
+  if (error) {
+    throw new Error(`Validation error: ${error.details[0].message}`);
+  }
+
+  const newPerson = {
+    id: uuid.v4(),
+    name: value.name,
+    age: value.age,
+    hobbies: value.hobbies || [],
+  };
+  persons.push(newPerson);
+  return newPerson;
 };
 
-module.exports = {
-  getAllPersons,
-  getPersonById,
+
+const deleteOnePerson = (id, persons) => {
+  const index = persons.findIndex(person => person.id === id);
+
+  if (index === -1) {
+    return null;
+  }
+
+  persons.splice(index, 1);
+  return persons;
+};
+
+
+const updatePerson = (id, updatedPerson, persons) => {
+  const index = persons.findIndex(person => person.id === id);
+
+  if (index === -1) {
+    return null;
+  }
+
+  persons[index] = {
+    ...persons[index],
+    ...updatedPerson
+  };
+
+  return persons;
+};
+
+
+module.exports=  {
   createPerson,
-  updatePerson,
-  deletePerson
+  getPersonById,
+  deleteOnePerson,
+  updatePerson
 };

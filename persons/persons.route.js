@@ -1,20 +1,20 @@
-const express = require('express');
-const router = express.Router();
-const personsController = require('./persons.controller');
-console.log(personsController.getAllPersons); // Should log a function
-console.log(personsController.getPersonById); // Should log a function
-console.log(personsController.createPerson); // Should log a function
-console.log(personsController.updatePerson); // Should log a function
-console.log(personsController.deletePerson); // Should log a function
+const express = require("express");
 
-router.get('/', personsController.getAllPersons);
-router.get('/:personId', personsController.getPersonById);
-router.post('/', personsController.createPerson);
-router.put('/:personId', personsController.updatePerson);
-router.delete('/:personId', personsController.deletePerson);
+const personController = require('../persons/persons.controller') 
+const personRouter = express.Router();
 
-// router.get('/', (req, res) => {
-//     res.send('Respond with a resource');
-//   });
+personRouter.route('/')
+  .get(personController.getPersons)
+  .post(personController.createPerson)
+  .delete(personController.deletePersons);
 
-module.exports = router;
+personRouter.route('/:personId')
+  .get(personController.getPerson)
+  .put(personController.updatePerson)
+  .delete(personController.deletePerson);
+
+personRouter.use((req, res) => {
+  res.status(404).json({ message: `${req.path} endpoint is not found` });
+});
+
+module.exports =  personRouter;
